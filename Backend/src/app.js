@@ -3,6 +3,7 @@ require("dotenv/config");
 const dbConnect = require("./config/dbConnect");
 const profileRoute = require("./routes/profile");
 const authRoute = require("./routes/auth");
+const recipeRoute = require("./routes/recipe");
 const cookieParser = require("cookie-parser");
 const app = express();
 
@@ -12,6 +13,7 @@ app.use(cookieParser());
 app.use(express.json());
 app.use("/auth", authRoute);
 app.use("/profile", profileRoute);
+app.use("/recipe", recipeRoute);
 
 dbConnect()
   .then(() => {
