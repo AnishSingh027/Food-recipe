@@ -1,15 +1,29 @@
 const Recipe = require("../models/recipe");
+const mongoose = require("mongoose");
 
 const addRecipe = async (req, res) => {
-  const { category, recipeName, recipe, photoUrl } = req.body;
+  const {
+    title,
+    description,
+    ingredients,
+    instructions,
+    cookingTime,
+    cuisine,
+    image,
+    category,
+  } = req.body;
 
   try {
     const recipeData = new Recipe({
-      uploadedBy: req._id,
+      createdBy: req._id,
+      title,
+      description,
+      ingredients,
+      instructions,
+      cookingTime,
+      cuisine,
+      image,
       category,
-      recipeName,
-      recipe,
-      photoUrl,
     });
 
     await recipeData.save();
@@ -21,7 +35,7 @@ const addRecipe = async (req, res) => {
 
 const showLoggedInUserRecipe = async (req, res) => {
   try {
-    const loggedInUserRecipe = await Recipe.find({ uploadedBy: req._id });
+    const loggedInUserRecipe = await Recipe.find({ createdBy: req._id });
     return res.json({ loggedInUserRecipe });
   } catch (error) {
     return res.status(400).end(error.message);
@@ -30,7 +44,7 @@ const showLoggedInUserRecipe = async (req, res) => {
 
 const showAllRecipe = async (req, res) => {
   try {
-    const allRecipe = await Recipe.find({}).populate("uploadedBy", [
+    const allRecipe = await Recipe.find({}).populate("createdBy", [
       "firstName",
       "lastName",
     ]);
@@ -44,10 +58,9 @@ const showRecipeOfSpecifiedUser = async (req, res) => {
   const { userId } = req.params;
 
   try {
-    const userRecipies = await Recipe.find({ uploadedBy: userId }).populate(
-      "uploadedBy",
-      ["firstName", "lastName"]
-    );
+    const userRecipies = await Recipe.find({
+      createdBy: new mongoose.Types.ObjectId(userId),
+    }).populate("createdBy", ["firstName", "lastName"]);
     return res.status(200).json({ userRecipies });
   } catch (error) {
     return res.status(400).end(error.message);
@@ -56,7 +69,16 @@ const showRecipeOfSpecifiedUser = async (req, res) => {
 
 const updateRecipe = async (req, res) => {
   const { recipeId } = req.params;
-  const allowedFields = ["recipeName", "photoUrl", "category", "recipe"];
+  const allowedFields = [
+    "title",
+    "description",
+    "ingredients",
+    "instructions",
+    "cookingTime",
+    "cuisine",
+    "image",
+    "category",
+  ];
 
   try {
     const isAllowed = Object.keys(req.body).every((field) =>
@@ -69,7 +91,7 @@ const updateRecipe = async (req, res) => {
 
     const recipe = await Recipe.findById(recipeId);
 
-    if (recipe.uploadedBy.toString() !== req._id) {
+    if (recipe.createdBy.toString() !== req._id) {
       throw new Error("Only edit own recipe");
     }
 
@@ -77,16 +99,37 @@ const updateRecipe = async (req, res) => {
       { _id: recipeId },
       {
         $set: {
-          recipeName: req.body.recipeName,
-          recipe: req.body.recipe,
-          photoUrl: req.body.photoUrl,
+          title: req.body.title,
+          description: req.body.description,
+          ingredients: req.body.ingredients,
+          instructions: req.body.instructions,
+          cookingTime: req.body.cookingTime,
+          cuisine: req.body.cuisine,
+          image: req.body.image,
           category: req.body.category,
         },
       },
       { runValidators: true }
     );
 
-    return res.status(200).end("User data updated successfully");
+    return res.status(200).end("Recipe data updated successfully");
+  } catch (error) {
+    return res.status(400).end(error.message);
+  }
+};
+
+const getRecipeById = async (req, res) => {
+  const { recipeId } = req.params;
+  console.log(recipeId);
+  try {
+    const recipe = await Recipe.findById(recipeId).populate("createdBy", [
+      "firstName",
+      "lastName",
+    ]);
+    if (!recipe) {
+      throw new Error("Recipe not found");
+    }
+    return res.status(200).json({ recipe });
   } catch (error) {
     return res.status(400).end(error.message);
   }
@@ -95,9 +138,12 @@ const updateRecipe = async (req, res) => {
 const deleteRecipe = async (req, res) => {
   const { recipeId } = req.params;
   try {
-    const recipe = await Recipe.findById(recipeId);
+    const recipe = await Recipe.findById(recipeId).populate("createdBy", [
+      "firstName",
+      "lastName",
+    ]);
 
-    if (recipe.uploadedBy.toString() !== req._id) {
+    if (recipe.createdBy._id.toString() !== req._id) {
       throw new Error("Only delete own recipe");
     }
 
@@ -116,4 +162,5 @@ module.exports = {
   showRecipeOfSpecifiedUser,
   updateRecipe,
   deleteRecipe,
+  getRecipeById,
 };

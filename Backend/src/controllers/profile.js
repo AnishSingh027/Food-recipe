@@ -31,7 +31,7 @@ const editProfile = async (req, res) => {
       throw new Error("Edit only allowed fields");
     }
 
-    await User.findByIdAndUpdate(
+    const updatedUser = await User.findByIdAndUpdate(
       { _id },
       {
         $set: {
@@ -43,10 +43,12 @@ const editProfile = async (req, res) => {
           about: req.body.about,
         },
       },
-      { runValidators: true }
+      { runValidators: true, new: true }
     );
 
-    return res.status(200).end("User profile updated successfully");
+    return res
+      .status(200)
+      .json({ message: "User profile updated successfully", updatedUser });
   } catch (error) {
     return res.status(400).end(error.message);
   }
